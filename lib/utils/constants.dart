@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 /// App-wide constants and styles
 class AppConstants {
+  // App
+  static const String appTitle = 'UEAB VC Appointment Booking';
+
   // Colors
   static const Color primaryColor = Colors.blue;
   static const Color secondaryColor = Colors.lightBlueAccent;

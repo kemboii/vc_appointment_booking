@@ -1,44 +1,34 @@
-import 'package:flutter/material.dart';
+class Appointment {
+  final String id;
+  final String date;
+  final String slot;
+  final String bookedBy;
+  final String reason;
 
-class CustomButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onPressed;
-  final bool isLoading;
-  final Color color;
-  final Color textColor;
-
-  const CustomButton({
-    required this.text,
-    required this.onPressed,
-    this.isLoading = false,
-    this.color = const Color(0xFF007BFF),
-    this.textColor = Colors.white,
-    super.key, // 👈 Cleaner constructor
+  Appointment({
+    required this.id,
+    required this.date,
+    required this.slot,
+    required this.bookedBy,
+    required this.reason,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      child: isLoading
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-          : Text(
-              text,
-              style: TextStyle(color: textColor),
-            ),
+  Map<String, dynamic> toMap() {
+    return {
+      'date': date,
+      'slot': slot,
+      'bookedBy': bookedBy,
+      'reason': reason,
+    };
+  }
+
+  factory Appointment.fromMap(String id, Map<String, dynamic> map) {
+    return Appointment(
+      id: id,
+      date: map['date'] ?? '',
+      slot: map['slot'] ?? '',
+      bookedBy: map['bookedBy'] ?? '',
+      reason: map['reason'] ?? '',
     );
   }
 }
