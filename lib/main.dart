@@ -10,13 +10,17 @@ import 'screens/home_screen.dart';
 import 'screens/admin_screen.dart';
 
 import 'package:vc_appointment_booking/app.dart';
+import 'package:vc_appointment_booking/services/notification_service.dart';
 
-Future main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  
+  // Initialize notifications
+  await NotificationService.initialize();
+  
   runApp(
     DevicePreview(
       enabled: true,

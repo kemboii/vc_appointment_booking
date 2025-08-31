@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:vc_appointment_booking/widgets/reason_selection_widget.dart';
+import 'package:vc_appointment_booking/services/notification_service.dart';
 
 class BookingScreen extends StatefulWidget {
   const BookingScreen({super.key});
@@ -19,6 +20,7 @@ class _BookingScreenState extends State<BookingScreen> {
   String _selectedReason = '';
   String _otherReason = '';
   String _userRole = 'Student';
+  late Future<QuerySnapshot> _appointmentsFuture;
   final List<String> _slots = [
     '09:00 AM',
     '10:00 AM',
@@ -34,6 +36,18 @@ class _BookingScreenState extends State<BookingScreen> {
   void initState() {
     super.initState();
     _loadUserRole();
+    _refreshAppointments();
+  }
+
+  void _refreshAppointments() {
+    final formattedDate =
+        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+    setState(() {
+      _appointmentsFuture = _firestore
+          .collection('appointments')
+          .where('date', isEqualTo: formattedDate)
+          .get();
+    });
   }
 
   Future<void> _loadUserRole() async {
@@ -82,7 +96,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     // Add or update the appointment
     if (existing.docs.isEmpty) {
-      await _firestore.collection('appointments').add({
+      final docRef = await _firestore.collection('appointments').add({
         'date': formattedDate,
         'slot': slot,
         'isBooked': true,
@@ -90,6 +104,9 @@ class _BookingScreenState extends State<BookingScreen> {
         'reason': _selectedReason == 'Other' ? _otherReason : _selectedReason,
         'timestamp': FieldValue.serverTimestamp(),
       });
+      
+      // Schedule notification for this appointment
+      await _scheduleNotificationForAppointment(docRef.id, formattedDate, slot);
     } else {
       await _firestore
           .collection('appointments')
@@ -100,14 +117,57 @@ class _BookingScreenState extends State<BookingScreen> {
         'reason': _selectedReason == 'Other' ? _otherReason : _selectedReason,
         'timestamp': FieldValue.serverTimestamp(),
       });
+      
+      // Schedule notification for this appointment
+      await _scheduleNotificationForAppointment(existing.docs.first.id, formattedDate, slot);
     }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Slot $slot booked for $formattedDate!')),
+      SnackBar(
+        content: Text('✅ Appointment confirmed for $slot on ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}!'),
+        backgroundColor: Colors.green,
+      ),
     );
-    setState(() {}); // Refresh UI
+    _refreshAppointments(); // Refresh UI
+  }
+
+  Future<void> _scheduleNotificationForAppointment(String appointmentId, String dateStr, String slot) async {
+    try {
+      // Parse appointment date and time
+      final appointmentDate = DateTime.parse(dateStr);
+      final timeStr = slot.split(' ')[0]; // Get start time like "09:00"
+      final timeParts = timeStr.split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      
+      final appointmentDateTime = DateTime(
+        appointmentDate.year,
+        appointmentDate.month,
+        appointmentDate.day,
+        hour,
+        minute,
+      );
+
+      await NotificationService.scheduleAppointmentReminder(
+        appointmentId: appointmentId,
+        appointmentDateTime: appointmentDateTime,
+        slot: slot,
+        reason: _selectedReason == 'Other' ? _otherReason : _selectedReason,
+        minutesBefore: 30,
+      );
+    } catch (e) {
+      // Silently handle notification scheduling errors
+      debugPrint('Failed to schedule notification: $e');
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh appointments when returning to this screen
+    _refreshAppointments();
   }
 
   @override
@@ -189,6 +249,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       setState(() {
                         _selectedDate = date;
                       });
+                      _refreshAppointments();
                     },
                   ),
                 ),
@@ -306,10 +367,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 SizedBox(
                   height: 300,
                   child: FutureBuilder<QuerySnapshot>(
-                    future: _firestore
-                        .collection('appointments')
-                        .where('date', isEqualTo: formattedDate)
-                        .get(),
+                    future: _appointmentsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(

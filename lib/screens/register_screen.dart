@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vc_appointment_booking/services/auth_service.dart';
 import 'package:vc_appointment_booking/app.dart';
+import 'package:vc_appointment_booking/utils/validators.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -123,64 +124,23 @@ class _RegisterPageState extends State<RegisterPage> {
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 24),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: "Full Name",
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) => value != null && value.isNotEmpty
-                      ? null
-                      : "Enter your full name",
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) => value != null && value.contains('@')
-                      ? null
-                      : "Enter a valid email",
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                  obscureText: _obscurePassword,
-                  validator: (value) => value != null && value.length >= 6
-                      ? null
-                      : "Password must be at least 6 characters",
-                ),
-                const SizedBox(height: 16),
+                // Role Selection First
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
-                  hint: const Text('Select Role'),
+                  hint: const Text('Select Your Role'),
                   decoration: const InputDecoration(
                     labelText: "Role",
                     border: OutlineInputBorder(),
+                    helperText: "Please select your role to see appropriate email requirements",
                   ),
                   onChanged: (value) {
                     setState(() {
                       _selectedRole = value;
                     });
+                    // Trigger email field validation when role changes
+                    if (_emailController.text.isNotEmpty) {
+                      _formKey.currentState?.validate();
+                    }
                   },
                   items: _roles.map((role) {
                     return DropdownMenuItem(
@@ -191,8 +151,69 @@ class _RegisterPageState extends State<RegisterPage> {
                   validator: (value) =>
                       value == null ? 'Please select a role' : null,
                 ),
-                if (_selectedRole == 'Parent') ...[
+                const SizedBox(height: 24),
+                // Basic Information Section
+                if (_selectedRole != null) ...[
+                  const Text(
+                    "Basic Information",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Full Name",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: Validators.validateFullName,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: "Email",
+                      border: const OutlineInputBorder(),
+                      helperText: _selectedRole == 'Student' || _selectedRole == 'Staff Member'
+                          ? 'Use your UEAB email (@ueab.ac.ke)'
+                          : null,
+                      helperMaxLines: 2,
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) => Validators.validateEmailWithRole(value, _selectedRole),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    obscureText: _obscurePassword,
+                    validator: Validators.validatePassword,
+                  ),
+                ],
+                // Role-specific Information Section
+                if (_selectedRole != null) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    "${_selectedRole!} Information",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (_selectedRole == 'Parent') ...[
                   TextFormField(
                     controller: _studentIdController,
                     decoration: const InputDecoration(
@@ -206,7 +227,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
                 if (_selectedRole == 'Student') ...[
-                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _schoolIdController,
                     decoration: const InputDecoration(
@@ -244,7 +264,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ],
                 if (_selectedRole == 'Staff Member') ...[
-                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _jobRoleController,
                     decoration: const InputDecoration(

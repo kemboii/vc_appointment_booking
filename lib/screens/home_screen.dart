@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/reason_selection_widget.dart';
 import '../screens/my_bookings_screen.dart';
 
@@ -38,6 +39,7 @@ class _HomePageState extends State<HomePage> {
   List<String> _tuesdaysInMonth = [];
   String _userFirstName = "";
   String _userRole = "";
+  bool _hasRequestedNotifications = false;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _HomePageState extends State<HomePage> {
     _rebuildTuesdaysInMonth();
     _loadBookedSlots();
     _loadUserFirstName();
+    _requestNotificationPermissions();
   }
 
   Future<void> _loadUserFirstName() async {
@@ -260,6 +263,57 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _logout() async {
     await _authService.signOut();
+  }
+
+  Future<void> _requestNotificationPermissions() async {
+    if (_hasRequestedNotifications) return;
+    _hasRequestedNotifications = true;
+
+    // Show dialog asking if user wants notifications
+    final bool? wantsNotifications = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('📱 Appointment Reminders'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Would you like to receive notifications to remind you about your upcoming VC appointments?'),
+              SizedBox(height: 16),
+              Text('• Get notified 30 minutes before your appointment\n• Never miss an important meeting\n• You can change this later in settings'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('No Thanks'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Enable Notifications'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (wantsNotifications == true) {
+      final granted = await NotificationService.requestPermissions();
+      if (granted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Notifications enabled! You\'ll be reminded about your appointments.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Schedule notifications for existing appointments
+        await NotificationService.scheduleNotificationsForUserAppointments();
+      }
+    }
   }
 
   @override

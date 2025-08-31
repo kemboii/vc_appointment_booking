@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:vc_appointment_booking/services/notification_service.dart';
 
 class MyBookingsPage extends StatefulWidget {
   const MyBookingsPage({super.key});
@@ -73,6 +74,8 @@ class _MyBookingsPageState extends State<MyBookingsPage> {
     );
     if (confirm == true) {
       await _firestore.collection('appointments').doc(documentId).delete();
+      // Cancel the notification for this appointment
+      await NotificationService.cancelAppointmentNotification(documentId);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Booking canceled.')));

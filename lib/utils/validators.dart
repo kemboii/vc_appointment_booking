@@ -13,6 +13,30 @@ class Validators {
     return null;
   }
 
+  // Validate email with role-specific domain requirements
+  static String? validateEmailWithRole(String? value, String? role) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email is required';
+    }
+
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value.trim())) {
+      return 'Enter a valid email address';
+    }
+
+    final email = value.trim().toLowerCase();
+    
+    // Check domain requirements based on role
+    if (role == 'Student' || role == 'Staff Member') {
+      if (!email.endsWith('@ueab.ac.ke')) {
+        return 'Students and Staff must use their UEAB email (@ueab.ac.ke)';
+      }
+    }
+    // Parents can use any valid email address
+
+    return null;
+  }
+
   // Validate password strength
   static String? validatePassword(String? value) {
     if (value == null || value.trim().isEmpty) {
